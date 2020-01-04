@@ -1,0 +1,95 @@
+<!-- 侧边栏 -->
+<div class="aside">
+    <!-- 个人资料 -->
+    <div id="person_msg" class="profile">
+
+    </div>
+    <!-- 导航菜单 -->
+    <div id="nav" class="navs">
+
+    </div>
+</div>
+<script src="./js/jquery.js"></script>
+<script src="./js/config.js"></script>
+<script>
+    $(function () {
+        let selectedTag = sessionStorage.getItem('selectedTag') || 'one';
+        let userSelectedTag = sessionStorage.getItem('userSelectedTag');
+        let t_html = `
+            <ul id="cy_item" class="list-unstyled">
+            <li>
+                <a tag="one" href="/back/goods_list" class="${selectedTag === 'one' ? 'active' : ''}">
+                    <i class="fa fa-area-chart"></i>
+                    商品管理
+                </a>
+            </li>
+            <li>
+                <a tag="two" href="/back/s_list" class="${selectedTag === 'two' ? 'active' : ''}">
+                    <i class="fa fa-calculator"></i>
+                    轮播图管理
+                </a>
+            </li>
+            <li>
+                <a tag="three" href="/back/u_center" class="${selectedTag === 'three' ? 'active' : ''}">
+                    <i class="fa fa-object-group"></i>
+                    用户管理
+                    <i class="arrow fa fa-angle-right"></i>
+                </a>
+                <ul id="user_item" class="list-unstyled" style="display: block">
+                    <li>
+                        <a tag="three-one" href="/back/u_center" class="${userSelectedTag === 'three-one' ? 'active' : ''}">
+                            用户中心
+                        </a>
+                    </li>
+                    <li>
+                        <a tag="three-two" href="/back/u_set" class="${userSelectedTag === 'three-two' ? 'active' : ''}">
+                            用户信息
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+        `;
+        $('#nav').html(t_html);
+
+
+        let token = JSON.parse(localStorage.getItem('result')).token;
+        if (token) {
+            $.ajax({
+                url: CY.SERVER + 'back/user/api/u_msg/' + token,
+                type: 'get',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.status === 200) {
+                        let tpl = `
+                             <div class="avatar img-circle">
+                                <img src="${data.result.icon_url ? '/uploads/' + data.result.icon_url : './uploads/shuai.jpg'}">
+                            </div>
+                            <h4>${data.result.real_name}</h4>
+                        `;
+                        $('#person_msg').html(tpl);
+                    }else {
+                        alert('获取用户信息失败！')
+                    }
+                }
+            })
+        }else{
+            // 删除本地数据
+            localStorage.removeItem('result');
+            // 跳转到首页
+            window.location.href = '/back/login'
+        }
+
+        // 处理点击选中
+        $('#cy_item>li>a').one('click', function () {
+            if ($(this).attr('tag') !== 'three') {
+                sessionStorage.setItem('userSelectedTag', '');
+            }
+            sessionStorage.setItem('selectedTag', $(this).attr('tag'));
+        });
+        $('#user_item>li>a').on('click', function () {
+            sessionStorage.setItem('selectedTag', 'three');
+            sessionStorage.setItem('userSelectedTag', $(this).attr('tag'));
+        })
+    })
+</script>

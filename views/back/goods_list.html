@@ -1,0 +1,146 @@
+{% extends "back/base.html"%}
+
+<!--新增的样式-->
+{% block style %}
+{% endblock %}
+
+<!--主要内容-->
+{% block body %}
+<div class="container-fluid">
+    <div class="body advert">
+        <ol class="breadcrumb">
+            <li><a href="/back/goods_list">商品管理</a></li>
+            <li class="active">商品列表</li>
+        </ol>
+        <div class="page-title">
+            <a href="/back/goods_add" class="btn btn-danger btn-sm pull-right">添加商品</a>
+        </div>
+        <div class="panel panel-default">
+                <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <td>序号</td>
+                        <th>商品名称</th>
+                        <th>缩略图</th>
+                        <th>原价</th>
+                        <th>折后价</th>
+                        <th>描述</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+
+                </tbody>
+            </table>
+        </div>
+        <ul id="pagination" class="pagination pull-right"></ul>
+    </div>
+</div>
+{% endblock %}
+
+<!--脚本-->
+{% block script %}
+<script src="./js/jquery.twbsPagination.js"></script>
+<script>
+    $(function () {
+        let pageSize = 2;
+        $.ajax({
+            url: CY.SERVER + 'back/goods/api/count',
+            type: 'get',
+            success: function (data) {
+                if (data.status === 200) {
+                    $('#pagination').twbsPagination({
+                       totalPages: Math.ceil(data.result / pageSize),
+                       visiblePages: 5,
+                       first: '首页',
+                       prev: '上一页',
+                       next: '下一页',
+                       last: '尾页',
+                       onPageClick: function (event, page) {
+                           loadData(page)
+                       }
+                    });
+                }else {
+                    alert('数据出现异常')
+                }
+            }
+        });
+        function loadData(page) {
+            $.ajax({
+                url: CY.SERVER + 'back/goods/api/list',
+                type: 'get',
+                data: {
+                    page: page,
+                    pageSize: pageSize
+                },
+                dataType: 'json',
+                success: function (data) {
+                    let tpl = ``;
+                    $(data.result).each(function (index, goods) {
+                        tpl += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${goods.name}</td>
+                            <td>
+                                <img src="/uploads/${goods.small_image}" alt="" style="width: 200px;">
+                            </td>
+                            <td>${goods.origin_price}</td>
+                            <td>${goods.price}</td>
+                            <td>${goods.spec}</td>
+                            <td>
+                                <a data-id="${goods._id}" class="btn btn-primary btn-xs btn-edit">编辑</a>
+                                <a data-id="${goods._id}" class="btn btn-danger btn-xs btn-del">删除</a>
+                            </td>
+                         </tr>
+                    `;
+                    });
+                    $('#tbody').html(tpl);
+                    $('.btn-edit').on('click', function () {
+                        let goodsId = $(this).attr('data-id');
+                        window.location.href = `/back/goods_edit?sid=${goodsId}`
+                    });
+                    $('.btn-del').on('click', function () {
+                        let goodsId = $(this).attr('data-id');
+                        $.ajax({
+                            url: CY.SERVER + 'back/goods/api/remove/' + goodsId,
+                            type: 'get',
+                            dataType: 'json',
+                            success: function (data) {
+                                if (data.status === 200) {
+                                    alert('删除成功！');
+                                }else{
+                                    alert('删除失败！');
+                                }
+                                window.location.reload();
+                            }
+                        })
+                    })
+                }
+            })
+        }
+    });
+    $(function () {
+        $('.btn-edit').on('click', function () {
+            let goodsId = $(this).attr('data-id');
+            // 传递id
+            window.location.href = `/back/goods_edit?sid=${goodsId}`;
+        });
+        $('.btn-del').on('click', function () {
+            let goodsId = $(this).attr('data-id');
+            $.ajax({
+                url: CY.SERVER + 'back/goods/api/remove/' + goodsId,
+                type: 'get',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.status === 200){
+                        alert('删除成功！')
+                    }else {
+                        alert('删除失败')
+                    }
+                    window.location.reload();
+                }
+            })
+        })
+    })
+</script>
+{% endblock %}

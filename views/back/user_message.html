@@ -1,0 +1,142 @@
+{% extends "back/base.html" %}
+{% block style %}
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="body teacher-profile">
+        <div id="user_msg" class="settings">
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    $(function () {
+        // 获取本地token
+        let token = JSON.parse(localStorage.getItem('result')).token;
+        // console.log(token);
+        if (token) {
+            $.ajax({
+                url: CY.SERVER + 'back/user/api/u_msg_all' + token,
+                type: 'get',
+                dataType: 'json',
+                success: function (data) {
+                    console.log(data);
+                    if (data.status === 200) {
+                        let tpl = `
+                        <form id="user_form" action="http://localhost:3000/back/user/api/edit" class="form-horizontal" method="post" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="" class="col-md-3 control-label">姓名</label>
+                                <div class="col-md-5">
+                                    <input type="text" id="real_name" name="real_name" class="form-control input-sm" value="${data.result.real_name ? data.result.real_name : ''}" placeholder="请输入真实姓名" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-md-3 control-label">头像</label>
+                                <div class="col-md-2 preview">
+                                    <img id="icon_url" src="${data.result.icon_url ? '/uploads/' + data.result.icon_url : './uploads/avatar.png'}" style="border: 1px solid #e0e0e0;">
+                                    <input type="file" id="upfile">
+                                    <div class="cover">
+                                        <i class="fa fa-upload"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-md-3 control-label">手机号码</label>
+                                <div class="col-md-5">
+                                    <input id="phone" name="phone" type="text" class="form-control input-sm" value="${data.result.phone ? data.result.phone : ''}" placeholder="请输入手机号码" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-md-3 control-label">Email</label>
+                                <div class="col-md-5">
+                                    <input id="e_mail" name="e_mail" type="text" class="form-control input-sm" value="${data.result.e_mail ? data.result.e_mail : ''}" placeholder="请输入电子邮箱" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-md-3 control-label">加入日期</label>
+                                <div class="col-md-5">
+                                    <input id="join_time" name="join_time" type="date" class="form-control input-sm" value="${data.result.join_time ? data.result.join_time : ''}" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-md-3 control-label">自我介绍</label>
+                                <div class="col-md-5 ckeditor">
+                                    <textarea id="intro_self" name="intro_self" rows="15" class="form-control input-sm" placeholder="请用一句话介绍自己">${data.result.intro_self ? data.result.intro_self : ''}</textarea>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-md-8">
+                                    <input id="btn_save" type="button" class="btn btn-danger pull-right" value="修改信息" >
+                                    <a href="/back/u_reset_pwd" class="btn btn-link btn-success pull-right">修改密码？</a>
+                                </div>
+                            </div>
+                     </form>
+                    `;
+                        $('#user_msg').html(tpl);
+                        $('#upfile').on('change', function () {
+                            // 获取用户上传的图片文件
+                            let file = $(this).get(0).files[0];
+                            // 读取文件
+                            let reader = new FileReader();
+                            if (file) {
+                                reader.readAsDataURL(file);
+                            }
+                            // 监听文件是否读取完毕
+                            reader.onload = function () {
+                                $('#icon_url').attr('src', reader.result);
+                            };
+                        });
+                        // 验证要提交的数据
+                        $('#btn_save').on('click', function () {
+                            // 手机验证
+                            let $phone = $('#phone');
+                            if (/^1[3456789]\d{9}$/.test($phone.val()) === false) {
+                                alert('请输入正确的手机号码');
+                                $phone.val('');
+                                return;
+                            }
+
+                            // 邮箱验证
+                            let $e_mail = $('#e_mail');
+                            if (/^([a-zA-Z0-9]+[_|\_|\.]?)*[a-zA-Z0-9]+@([a-zA-Z0-9]+[_|\_|\.]?)*[a-zA-Z0-9]+\.[a-zA-Z]{2,3}$/.test($e_mail.val()) === false){
+                                alert('请输入正确的电子邮箱');
+                                $e_mail.val('');
+                                return;
+                            }
+                            let icon_url = $('#upfile').get(0).files[0] || data.result.icon_url;
+                            let $user_form = $('#user_form');
+                            let formData = new FormData($user_form.get(0));
+                            formData.append('token',token);
+                            formData.append('icon_url', icon_url);
+                            $.ajax({
+                                url: $user_form.attr('action'),
+                                type: $user_form.attr('method'),
+                                data: formData,
+                                processData: false,
+                                contentType: false,
+                                success: function (data) {
+                                    if (data.status === 200) {
+                                        alert('用户信息修改成功~！');
+                                        window.location.href = '/back/u_center';
+                                    }else{
+                                        alert('用户信息修改失败！')
+                                    }
+                                }
+                            });
+                        });
+                    }else{
+                        alert('获取用户信息失败');
+                    }
+                }
+            });
+        }else{
+            localStorage.removeItem('result');
+            window.location.href = '/back/login';
+        }
+    })
+</script>
+{% endblock %}

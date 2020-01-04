@@ -1,0 +1,204 @@
+{% extends "back/base.html"%}
+
+<!--新增的样式-->
+{% block style %}
+    <style>
+        .preview {
+            width: 300px;
+            height: 100px;
+            padding: 0;
+            margin-left: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview:hover .cover {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .preview:hover .fa-upload {
+            color: rgba(240, 240, 240, 0.8);
+        }
+
+        #upfile {
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 9;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+        }
+
+        .cover {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            line-height: 100px;
+            font-size: 40px;
+            background-color: rgba(0, 0, 0, 0);
+            transition: all 0.3s;
+        }
+
+        .fa-upload {
+            color: rgba(240, 240, 240, 0);
+        }
+    </style>
+{% endblock %}
+
+<!--主要内容-->
+{% block body %}
+<div class="container-fluid">
+    <div class="body advert">
+        <!-- 面包屑 -->
+        <ol class="breadcrumb">
+            <li><a href="/back/goods_list">商品管理</a></li>
+            <li class="active">编辑商品</li>
+        </ol>
+        <div id="goods_add" class="advert-add">
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!--脚本-->
+{% block script %}
+<!--引入富文本编辑器-->
+<script src="./js/wangEditor/wangEditor.js"></script>
+<script>
+    $(function () {
+        initData();
+    });
+    function initData() {
+        let url = window.location.search, goodsId = '';
+        if (url.indexOf('?') !== -1) {
+            goodsId = url.substr(url.indexOf('=')+1);
+        }
+        // 发起请求
+        $.ajax({
+            url: CY.SERVER + 'back/goods/api/singer/'+ goodsId,
+            type: 'get',
+            dataType: 'json',
+            success: function (data) {
+                // console.log(data);
+                let tpl = `
+                    <form action="/back/goods/api/edit" method="post" class="form-horizontal" enctype="multipart/form-data" xmlns="http://www.w3.org/1999/html">
+                <div class="form-group">
+                    <label for="" class="col-md-3 control-label">商品名称</label>
+                    <div class="col-md-5">
+                        <input name="name" type="text" class="form-control input-sm" placeholder="请填写商品名称" value="${data.result.name}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="" class="col-md-3 control-label">缩略图</label>
+                    <div class="col-md-2 preview">
+                        <img id="small_image" src="/uploads/${data.result.small_image}" alt="" style="border: 1px solid #e0e0e0;">
+                        <input type="file" id="upfile">
+                        <div class="cover">
+                            <i class="fa fa-upload"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="" class="col-md-3 control-label">商品原价</label>
+                    <div class="col-md-5">
+                        <input name="origin_price" type="number" class="form-control input-sm" placeholder="请填写商品原价" value="${data.result.origin_price}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="" class="col-md-3 control-label">商品折扣价</label>
+                    <div class="col-md-5">
+                        <input name="price" type="number" class="form-control input-sm" placeholder="请填写商品折扣价" value="${data.result.price}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="" class="col-md-3 control-label">促销文案</label>
+                    <div class="col-md-5">
+                        <input name="spec" type="text" class="form-control input-sm" placeholder="请填写商品促销文案" value="${data.result.spec}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="" class="col-md-3 control-label">商品详情</label>
+                    <div class="col-md-8">
+                        <div id="editor"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-11">
+                        <input type="submit" class="btn btn-danger btn-sm pull-right" value="修改商品">
+                    </div>
+                </div>
+            </form>
+                `;
+                $('#goods_add').html(tpl);
+                let E = window.wangEditor;
+                let editor = new E('#editor');
+                editor.customConfig.customUploadImg = function (files, insert) {
+                    console.log(files);
+                    if (files.length > 0) {
+                        let formData = new FormData();
+                        formData.append('image_url', files[0]);
+                        $.ajax({
+                            url: CY.SERVER + 'back/goods/api/add_img',
+                            type: 'post',
+                            data: formData,
+                            processData: false,
+                            contentTyep: false,
+                            success: function (data) {
+                                if (data.status === 200){
+                                    insert(data.result)
+                                }
+                            }
+                        })
+                    }
+                };
+                editor.create();
+                editor.txt.html(data.result.content);
+                // 上传图片加载处理
+                $('#upfile').on('change', function () {
+                    let file = $(this).get(0).files[0];
+                    let reader = new FileReader();
+                    if (file) {
+                        reader.readAsDataURL(file);
+                    }
+                    reader.onloadend = function () {
+                        $('#small_image').attr('src', reader.result)
+                    }
+                });
+                // 提交表单
+                $('form').on('submit', function () {
+                    let content = editor.txt.html();
+                    if (content) {
+                        let formData = new FormData($(this).get(0));
+                        formData.append('id', data.result._id);
+                        formData.append('content', content);
+                        formData.append('small_image', $('#upfile').get(0).files[0] || data.result.small_image);
+                        $.ajax({
+                            url: $(this).attr('action'),
+                            type: $(this).attr('method'),
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            success: function (data) {
+                                if (data.status === 200) {
+                                    alert('商品修改成功！');
+                                    window.location.href = '/back/goods_list'
+                                }else {
+                                    alert('商品修改失败')
+                                }
+                            }
+                        });
+                    }else {
+                        alert('商品修改失败')
+                    }
+                    return false;
+                });
+            }
+        });
+    }
+</script>
+{% endblock %}

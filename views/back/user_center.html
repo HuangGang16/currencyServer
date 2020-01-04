@@ -1,0 +1,71 @@
+{% extends "back/base.html"%}
+{% block style %}
+{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <!-- 客户信息 -->
+    <div class="body user-profile">
+        <!-- 面包屑 -->
+        <ol class="breadcrumb">
+            <li><a href="javascript:;">用户管理</a></li>
+            <li class="active">用户信息</li>
+        </ol>
+        <div id="user_msg" class="profile">
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    $(function () {
+        // 获取本地的token
+        let token = JSON.parse(localStorage.getItem('result')).token;
+        // 发起请求
+        if (token) {
+            $.ajax({
+                url: CY.SERVER + 'back/user/api/u_msg/' + token,
+                type: 'get',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.status === 200) {
+                        // 注入数据
+                        let tpl = `
+                    <div class="pull-left">
+                        <img src="${data.result.icon_url ?  '/uploads/' + data.result.icon_url : './uploads/avatar.png'}" class="img-circle pull-left" alt="">
+                        <span class="name">${data.result.real_name}</span>
+                        <span>${data.result.intro_self}</span>
+                    </div>
+                    <ul class="pull-right list-inline">
+                        <li>
+                            <span>积分</span>
+                            <a href="javascript:;">${data.result.points}</a>
+                        </li>
+                        <li>
+                            <span>等级</span>
+                            <a href="javascript:;">${data.result.rank}</a>
+                        </li>
+                        <li>
+                            <span>金币</span>
+                            <a href="javascript:;">${data.result.gold}</a>
+                        </li>
+                    </ul>
+                   `;
+                        $('#user_msg').html(tpl);
+                    }else{
+                        alert('获取用户信息失败')
+                    }
+                }
+            });
+        }else{
+            // 删除本地数据
+            localStorage.removeItem('result');
+            // 跳转到登录页面
+            window.location.href = '/back/login';
+        }
+
+    })
+</script>
+{% endblock%}
